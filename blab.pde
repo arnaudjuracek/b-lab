@@ -2,25 +2,26 @@ B_lab b;
 PGraphics pg;
 
 void b(){
-	b = new B_lab(10, 10, 3);
-	b.draw_grid(width*.75, height*.75, 25);
+	b = new B_lab(16, 6, 3);
+	b.draw_grid(width-50, height-50, 25);
 	pg = createGraphics(width, height);
 		pg.beginDraw();
-		pg.shape(b.GRID_shape, int(width*.125), int(height*.125));
+		pg.background(b.GREEN);
+		pg.shape(b.GRID_shape, 25, 25);
 		pg.endDraw();
 }
 
 void setup(){
-	size(800, 800);
+	size(851, 315);
 	smooth();
 	b();
 }
 
 void draw(){
-	background(b.GREEN);
  	image(pg, 0, 0);
 }
 
 void keyPressed(){
 	if(key == 'r') b();
+	if(key == 's') save("/Users/RNO/Desktop/blab.png");
 }

@@ -1,11 +1,12 @@
 public class B_lab{
 	// CONSTANTS FOR EASY NAMING SCHEME
-	public color GREEN = color(26, 213, 172);
+	public color GREEN = color(18, 211, 169);
 	public color BLACK = color(0);
 	private int
-		TRIANGLE = 0,
-		DIAMOND = 1,
-		CIRCLE = 2;
+		TRIANGLE_UP = 0,
+		TRIANGLE_DOWN = 1,
+		DIAMOND = 2,
+		CIRCLE = 3;
 
 	public ArrayList<PShape> SHAPES_list;
 	public PShape GRID_shape;
@@ -43,7 +44,8 @@ public class B_lab{
 	// PUBLIC ACCESS
 
 	public color green(){ return this.GREEN; }
-	public PShape triangle(){ return this.SHAPES_list.get(TRIANGLE);}
+	public PShape triangle_up(){ return this.SHAPES_list.get(TRIANGLE_UP);}
+	public PShape triangle_down(){ return this.SHAPES_list.get(TRIANGLE_DOWN);}
 	public PShape circle(){ return this.SHAPES_list.get(CIRCLE);}
 	public PShape diamond(){ return this.SHAPES_list.get(DIAMOND);}
 
@@ -71,18 +73,21 @@ public class B_lab{
 			int[][] g = this.GRID_list.get(a);
 			int n_cols = g.length,
 				n_rows = g[0].length;
-			float scale = (max(n_cols, n_rows)-max(w, h))/max(n_cols, n_rows);
+			// float scale = (max(n_cols, n_rows)-max(w, h))/max(n_cols, n_rows);
+			float scale = (w<h) ? (n_cols - w)/n_cols : (n_rows - h)/n_rows;
+
+			PVector position = new PVector();
 
 			for(int y=0; y<n_rows; y++){
 				for(int x=0; x<n_cols; x++){
 					if(g[x][y] > -1){
 						PShape s = this.build_shape(g[x][y]);
 						if(s!=null){
+							position.x = x*(w/n_cols) + abs(scale); // + (x/sq)*margin,
+							position.y = y*(h/n_rows) + abs(scale);  // + (y/sq)*margin,
+
 							s.resetMatrix();
-							s.translate(
-								x*(w/n_cols) + abs(scale), // + (x/sq)*margin,
-								y*(h/n_rows) + abs(scale)  // + (y/sq)*margin
-							);
+							s.translate(position.x, position.y);
 							s.scale(scale + sqrt(margin));
 							group.addChild(s);
 						}
@@ -103,7 +108,7 @@ public class B_lab{
 
 	// GRID_list BUILDING
 	private void build_grid_list(int w, int h){
-		int[] s = {TRIANGLE, CIRCLE, DIAMOND, CIRCLE, DIAMOND};
+		int[] s = {TRIANGLE_UP, TRIANGLE_DOWN, CIRCLE, DIAMOND, CIRCLE, DIAMOND};
 		int[][] g = new int[w][h];
 
 		for(int x=0; x<w; x++){
@@ -115,7 +120,7 @@ public class B_lab{
 	}
 
 	private void build_grid_list(int w, int h, int n){
-		int[] s = {TRIANGLE, CIRCLE, DIAMOND, CIRCLE, DIAMOND};
+		int[] s = {TRIANGLE_UP, TRIANGLE_DOWN, CIRCLE, DIAMOND, CIRCLE, DIAMOND};
 		int sq = 1;
 		for(int i=0; i<n; i++){
 			int n_cols = int(w*sq),
@@ -145,17 +150,24 @@ public class B_lab{
 	private PShape build_shape(int shape){
 		PShape s;
 		switch(shape){
-			case 0 : s = this.build_triangle(); break;
-			case 1 : s = this.build_diamond(); break;
-			case 2 : s = this.build_circle(); break;
+			case 0 : s = this.build_triangle_up(); break;
+			case 1 : s = this.build_triangle_down(); break;
+			case 2 : s = this.build_diamond(); break;
+			case 3 : s = this.build_circle(); break;
 			default : s = null; break;
 		}
 		return s;
 	}
 
-	private PShape build_triangle(){
+	private PShape build_triangle_up(){
+		PShape triangle = createShape(PShape.TRIANGLE, 0, 0, 1, 0, .5, 1);
+			triangle.setFill(this.BLACK);
+			triangle.setStroke(false);
+		return triangle;
+	}
+
+	private PShape build_triangle_down(){
 		PShape triangle = createShape(PShape.TRIANGLE, 0, 1, 1, 1, .5, 0);
-			triangle.rotate(PI);
 			triangle.setFill(this.BLACK);
 			triangle.setStroke(false);
 		return triangle;
@@ -183,7 +195,8 @@ public class B_lab{
 
 	private void build_shapes(){
 		this.SHAPES_list = new ArrayList<PShape>();
-		this.SHAPES_list.add(this.build_triangle());
+		this.SHAPES_list.add(this.build_triangle_up());
+		this.SHAPES_list.add(this.build_triangle_down());
 		this.SHAPES_list.add(this.build_diamond());
 		this.SHAPES_list.add(this.build_circle());
 
