@@ -4,21 +4,39 @@ public class B_lab{
 	public color BLACK = color(0);
 	public PShape LOGO;
 	private int
+		EMPTY = -1,
 		TRIANGLE_UP = 0,
 		TRIANGLE_DOWN = 1,
 		DIAMOND = 2,
-		CIRCLE = 3;
-	private int[] PROB = {TRIANGLE_UP, TRIANGLE_DOWN, CIRCLE, DIAMOND, CIRCLE, DIAMOND};
+		CIRCLE = 3,
+		SQUARE = 4; // bonus debug
+
+	// private int[] PROBA = {
+	// 	EMPTY,
+	// 	TRIANGLE_UP, TRIANGLE_UP,
+	// 	TRIANGLE_DOWN, TRIANGLE_DOWN,
+	// 	CIRCLE, CIRCLE, CIRCLE,
+	// 	DIAMOND, DIAMOND, DIAMOND};
+	private int[] PROBA = {SQUARE}; // bonus debug
 
 	public ArrayList<Cell> CELLS;
 
 
 
+	public int
+		MIN_SIZE = 12,
+		MAX_SIZE = 100,
+		MARGIN = 10;
+
 
 	// -------------------------------------------------------
 	// CONSTRUCTORS
 
-	B_lab(int w, int h, int n_scales){
+	B_lab(int w, int h, int n_scales, int... max_size){
+		this.MARGIN /= n_scales;
+		if(max_size.length>0) this.MAX_SIZE = max_size[0];
+		this.MIN_SIZE = max(6, this.MAX_SIZE / int(pow(2, n_scales)));
+
 		this.build_grid(w, h, n_scales);
 	}
 
@@ -44,12 +62,10 @@ public class B_lab{
 
 	private void build_grid(int w, int h, int n){
 		this.CELLS = new ArrayList<Cell>();
-
 		int index = 0;
-		int size = 100;
-		for(int x=0; x<w; x+=size){
-			for(int y=0; y<h; y+=size){
-				this.CELLS.add(new Cell(this, null, index, x, y, 100, this.PROB[int(random(this.PROB.length))]));
+		for(int x=0; x<w; x+=this.MAX_SIZE + this.MARGIN*.5){
+			for(int y=0; y<h; y+=this.MAX_SIZE + this.MARGIN*.5){
+				this.CELLS.add(new Cell(this, null, index, x, y, this.MAX_SIZE, this.MARGIN, this.PROBA[int(random(this.PROBA.length))]));
 				index++;
 			}
 		}
@@ -64,18 +80,27 @@ public class B_lab{
 
 
 
-
+	private int random_shape(){
+		return this.PROBA[int(random(this.PROBA.length))];
+	}
 
 	private PShape build_shape(int shape){
 		PShape s;
 		switch(shape){
+			case -1 : s = this.build_empty(); break;
 			case 0 : s = this.build_triangle_up(); break;
 			case 1 : s = this.build_triangle_down(); break;
 			case 2 : s = this.build_diamond(); break;
 			case 3 : s = this.build_circle(); break;
+			case 4 : s = this.build_square(); break;
 			default : s = null; break;
 		}
 		return s;
+	}
+
+	private PShape build_empty(){
+		PShape empty = createShape();
+		return empty;
 	}
 
 	private PShape build_triangle_up(){
@@ -105,6 +130,13 @@ public class B_lab{
 		return diamond;
 	}
 
+	private PShape build_square(){
+		PShape square = createShape(RECT, 0, 0, 1, 1);
+			square.setFill(this.BLACK);
+			square.setStroke(false);
+		return square;
+	}
+
 	private PShape build_circle(){
 		PShape circle = createShape(PShape.ELLIPSE, .5, .5, 1, 1);
 			circle.setFill(this.BLACK);
@@ -130,16 +162,30 @@ public class B_lab{
 
 
 	public Cell get(int x, int y){
-		for(Cell c : this.CELLS) if(c.x == x && c.y == y) return c;
-		return null;
+		Cell rtrn = null;
+		for(Cell c : this.CELLS){
+			rtrn = c.hover(x,y);
+			if(rtrn!=null) break;
+		}
+		return rtrn;
+	}
+
+	public Cell get(int x, int y, int radius){
+		Cell rtrn = null;
+		for(Cell c : this.CELLS){
+			rtrn = c.hover(x,y,radius);
+			if(rtrn!=null) break;
+		}
+		return rtrn;
 	}
 
 	private class Cell{
 		B_lab parent;
 		Cell parent_cell;
-		int index, x, y, size, shape;
+		int index, shape;
+		float x, y, size, margin;
 		ArrayList<Cell> subcells;
-		Cell(B_lab parent, Cell parent_cell, int index, int x, int y, int size, int shape){
+		Cell(B_lab parent, Cell parent_cell, int index, float x, float y, float size, float margin, int shape){
 			this.subcells = new ArrayList<Cell>();
 			this.index = index;
 			this.parent = parent;
@@ -147,16 +193,18 @@ public class B_lab{
 			this.x = x;
 			this.y = y;
 			this.size = size;
-			this.shape = random(100) < 30 ? parent.PROB[int(random(parent.PROB.length))] : shape;
+			this.margin = margin;
+			this.shape = (random(100) < 30) || shape >= 0 ? parent.random_shape() : shape;
 		}
 
 		public void divide(){
-			if(this.subcells.size()==0 && this.size>25){
+			if(this.subcells.size()==0 && this.size>this.parent.MIN_SIZE*2){
 				int index = 0;
-				int size = int(this.size*.5);
-				for(int x=0; x<size*2; x+=size){
-					for(int y=0; y<size*2; y+=size){
-						this.subcells.add(new Cell(this.parent, this, index, this.x + x, this.y + y, size, this.shape));
+				float margin = this.margin;
+				float size = this.size*.5 - margin*.25;
+				for(float x=0; x<size*2; x+=size+margin*.5){
+					for(float y=0; y<size*2; y+=size+margin*.5){
+						this.subcells.add(new Cell(this.parent, this, index, this.x + x, this.y + y, size, margin, this.shape));
 						index++;
 					}
 				}
@@ -180,10 +228,17 @@ public class B_lab{
 			return s;
 		}
 
-		public Cell hover(){
-			if(this.subcells.size()==0) return (mouseX-25 > this.x && mouseX-25 < this.x + this.size && mouseY-25 > this.y && mouseY-25 < this.y + this.size) ? this : null;
-			else for(Cell sub : this.subcells) if(sub.hover()!=null) return sub.hover();
+		public Cell hover(int x, int y){
+			if(this.subcells.size()==0) return (x-this.margin > this.x && x-this.margin < this.x + this.size && y-this.margin > this.y && y-this.margin < this.y + this.size) ? this : null;
+			else for(Cell sub : this.subcells) if(sub.hover(x,y)!=null) return sub.hover(x,y);
 			return null;
 		}
+
+		public Cell hover(int x, int y, int radius){
+			if(this.subcells.size()==0) return (x-this.margin > this.x && x-this.margin < this.x + this.size && y-this.margin > this.y && y-this.margin < this.y + this.size) ? this : null;
+			else for(Cell sub : this.subcells) if(sub.hover(x,y,radius)!=null) return sub.hover(x,y,radius);
+			return null;
+		}
+
 	}
 }
