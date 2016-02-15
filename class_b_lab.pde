@@ -26,7 +26,7 @@ public class B_lab{
 	public int
 		MIN_SIZE = 12,
 		MAX_SIZE = 100,
-		MARGIN = 10;
+		MARGIN = 20;
 
 
 	// -------------------------------------------------------
