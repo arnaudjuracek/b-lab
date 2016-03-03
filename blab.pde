@@ -1,27 +1,23 @@
 B_lab b;
-PGraphics pg;
-
-void b(){
-	b = new B_lab(width-100, height-100, 3);
-	pg = createGraphics(width, height);
-		pg.beginDraw();
-		pg.shape(b.draw_cells(), b.MARGIN*2, b.MARGIN*2);
-		pg.endDraw();
-}
-
-void setup(){
-	size(950, 450);
-	smooth();
-	b();
-}
+Map m;
 
 float dx = 1, dy = 1;
 float x = 0, y = 0;
-B_lab.Cell previous;
+Cell previous;
+
+
+void setup(){
+	size(1074, 839);
+	smooth();
+	new_b();
+}
+
+
 
 void draw(){
 	background(b.GREEN);
-	image(pg, 0, 0);
+	if(b.BUFFER != null) image(b.BUFFER, 0, 0);
+	noLoop();
 
 	// x += dx*10;
 	// y += dy*10;
@@ -31,58 +27,66 @@ void draw(){
 	// if(x<0) dx = random(1);
 	// if(y<0) dy = random(1);
 
-	x = mouseX;
-	y = mouseY;
+	// x = mouseX;
+	// y = mouseY;
 
-	B_lab.Cell c = b.get(int(x), int(y), 50);
-	if(c!=null && c!=previous){
-		previous = c;
-		if(mouseButton != LEFT) c.divide();
-		else c.merge();
-		// c.shape = b.random_shape();
-		pg = createGraphics(width, height);
-		pg.beginDraw();
-		pg.shape(b.draw_cells(), b.MARGIN*2, b.MARGIN*2);
-		pg.endDraw();
-	}
+	// Cell c = b.get_cell(int(x), int(y), 50);
+	// if(c!=null && c!=previous){
+	// 	previous = c;
+	// 	if(mouseButton != LEFT) c.divide();
+	// 	else c.merge();
+	// 	// c.shape = b.random_shape();
+	// 	b.refresh();
+	// }
 
-	stroke(255, 100);
-	strokeWeight(50);
-	point(x, y);
+	// stroke(255, 100);
+	// strokeWeight(50);
+	// point(x, y);
 
 }
+
+
+
+void new_b(){
+	b = new B_lab(width-100, height-100, 3);
+	m = new Map("david.jpg");
+	b.build_grid(m, 3);
+
+	b.refresh();
+	loop();
+}
+
 
 
 void mousePressed(){
-	B_lab.Cell c = b.get(mouseX, mouseY);
+	Cell c = b.get_cell(new PVector(mouseX, mouseY));
 	if(c!=null){
-		c.divide();
-		pg = createGraphics(width, height);
-		pg.beginDraw();
-		pg.shape(b.draw_cells(), b.MARGIN*2, b.MARGIN*2);
-		pg.endDraw();
+		// c.merge();
+		// b.refresh();
+		println(c.J + ";" + c.K);
 	}
+	loop();
 }
+
+
 
 void mouseDragged(){
-	B_lab.Cell c = b.get(mouseX, mouseY);
+	Cell c = b.get_cell(new PVector(mouseX, mouseY));
 	if(c!=null){
 		c.divide();
-		pg = createGraphics(width, height);
-		pg.beginDraw();
-		pg.shape(b.draw_cells(), b.MARGIN*2, b.MARGIN*2);
-		pg.endDraw();
+		b.refresh();
 	}
+	loop();
 }
 
+
+
 void keyPressed(){
-	if(key == 'r') b();
+	if(key == 'r') new_b();
 	if(key == 's') save("/Users/RNO/Desktop/blab.png");
 	if(key == ' '){
-		b.CELLS.get(int(random(b.CELLS.size()-1))).divide();
-		pg = createGraphics(width, height);
-		pg.beginDraw();
-		pg.shape(b.draw_cells(), b.MARGIN*2, b.MARGIN*2);
-		pg.endDraw();
+		b.get_cell(int(random(b.CELLS.size()-1))).divide();
+		b.refresh();
 	}
+	loop();
 }
