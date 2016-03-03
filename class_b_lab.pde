@@ -1,162 +1,243 @@
+// CONSTANTS FOR EASY NAMING SCHEME
+public static int
+	SMALL_DIAMOND = -2,
+	SMALL_CIRCLE = -3,
+	EMPTY = -1,
+	TRIANGLE_UP = 0,
+	TRIANGLE_DOWN = 1,
+	DIAMOND = 2,
+	CIRCLE = 3,
+	SQUARE = 4; // bonus debug
+
+
+
 public class B_lab{
-	// CONSTANTS FOR EASY NAMING SCHEME
 	public color GREEN = color(18, 211, 169);
 	public color BLACK = color(0);
-	private int
-		TRIANGLE_UP = 0,
-		TRIANGLE_DOWN = 1,
-		DIAMOND = 2,
-		CIRCLE = 3;
+	public PShape LOGO;
 
-	public ArrayList<PShape> SHAPES_list;
-	public PShape GRID_shape;
-	private ArrayList<int[][]> GRID_list;
 
+	private int[] PROBA = {
+		EMPTY,
+		TRIANGLE_UP, TRIANGLE_UP,
+		TRIANGLE_DOWN, TRIANGLE_DOWN,
+		CIRCLE, CIRCLE, CIRCLE,
+		DIAMOND, DIAMOND, DIAMOND};
+	// private int[] PROBA = {SQUARE}; // bonus debug
+
+
+	public int
+		MIN_SIZE = 12,
+		MAX_SIZE = 100,
+		MARGIN = 20;
 
 
 
 	// -------------------------------------------------------
 	// CONSTRUCTORS
 
-	B_lab(){
-		this.build_shapes();
+	B_lab(int w, int h, int n_scales, int... max_size){
+		this.MARGIN /= n_scales;
+		if(max_size.length>0) this.MAX_SIZE = max_size[0];
+		this.MIN_SIZE = max(6, this.MAX_SIZE / int(pow(2, n_scales)));
+
+		this.build_grid(w, h, n_scales);
 	}
 
-	B_lab(int width, int height){
-		this.build_shapes();
-
-		this.GRID_list = new ArrayList<int[][]>();
-		this.build_grid_list(width, height);
-	}
-
-	B_lab(int width, int height, int n_scales){
-		this.build_shapes();
-
-		this.GRID_list = new ArrayList<int[][]>();
-		this.build_grid_list(width, height, n_scales);
-	}
-
-
-
-
-
-	// -------------------------------------------------------
-	// PUBLIC ACCESS
-
-	public color green(){ return this.GREEN; }
-	public PShape triangle_up(){ return this.SHAPES_list.get(TRIANGLE_UP);}
-	public PShape triangle_down(){ return this.SHAPES_list.get(TRIANGLE_DOWN);}
-	public PShape circle(){ return this.SHAPES_list.get(CIRCLE);}
-	public PShape diamond(){ return this.SHAPES_list.get(DIAMOND);}
-
-
-
-
-
-	// -------------------------------------------------------
-	// HELPERS
-
-	private PVector calc_size_diff(PVector input, PVector output){ return new PVector(output.x - input.x, output.y - input.y); }
-	private PVector calc_size_diff(float input_width, float input_height, float output_width, float output_height){ return new PVector(output_width - input_width, output_height - input_height); }
-	private float get_size_diff(PVector input, PVector output){ PVector s = calc_size_diff(input, output); return (s.x < s.y) ? s.x : s.y; }
-	private float get_size_diff(float input_width, float input_height, float output_width, float output_height){ PVector s = calc_size_diff(input_width, input_height, output_width, output_height); return (s.x < s.y) ? s.x : s.y; }
 
 
 	// -------------------------------------------------------
 	// DRAWING
 
-	public PShape draw_grid(float w, float h, float margin){
-		PShape group = createShape(GROUP);
+	PGraphics BUFFER;
 
-		int sq = 1;
-		for(int a=0; a<this.GRID_list.size(); a++){
-			int[][] g = this.GRID_list.get(a);
-			int n_cols = g.length,
-				n_rows = g[0].length;
-			// float scale = (max(n_cols, n_rows)-max(w, h))/max(n_cols, n_rows);
-			float scale = (w<h) ? (n_cols - w)/n_cols : (n_rows - h)/n_rows;
-
-			PVector position = new PVector();
-
-			for(int y=0; y<n_rows; y++){
-				for(int x=0; x<n_cols; x++){
-					if(g[x][y] > -1){
-						PShape s = this.build_shape(g[x][y]);
-						if(s!=null){
-							position.x = x*(w/n_cols) + abs(scale); // + (x/sq)*margin,
-							position.y = y*(h/n_rows) + abs(scale);  // + (y/sq)*margin,
-
-							s.resetMatrix();
-							s.translate(position.x, position.y);
-							s.scale(scale + sqrt(margin));
-							group.addChild(s);
-						}
-					}
-				}
-			}
-			sq *= 2;
-		}
-		return this.GRID_shape = group;
+	public PShape draw_cells(){
+		PShape g = createShape(GROUP);
+		for(Cell c : this.CELLS) g.addChild(c.draw());
+		return g;
 	}
 
+	public PGraphics refresh(){
+		this.BUFFER = createGraphics(width, height);
+			this.BUFFER.beginDraw();
+			this.BUFFER.shape(this.draw_cells(), this.MARGIN*2, this.MARGIN*2);
+			this.BUFFER.endDraw();
+		return this.BUFFER;
+	}
+
+
+
+	// -------------------------------------------------------
+	// CELLS RELATED HELPERS
+
+	public ArrayList<Cell> CELLS;
+
+	public Cell get_cell(int index){
+		return this.CELLS.get(index);
+	}
+
+	public Cell get_cell(){
+		return this.get_cell(int(random(this.CELLS.size())));
+	}
+
+	public Cell get_cell(PVector position){
+		Cell rtrn = null;
+		for(Cell c : this.CELLS){
+			rtrn = c.hover(position);
+			if(rtrn!=null) break;
+		}
+		return rtrn;
+	}
+
+	public Cell get_cell(int j, int k){
+		Cell rtrn = null;
+		for(Cell c : this.CELLS){
+			if(c.J == j && c.K == k) rtrn = c;
+		}
+		return rtrn;
+	}
 
 
 
 
 	// -------------------------------------------------------
-	// BUILDING
+	// CELL GRID
 
-	// GRID_list BUILDING
-	private void build_grid_list(int w, int h){
-		int[] s = {TRIANGLE_UP, TRIANGLE_DOWN, CIRCLE, DIAMOND, CIRCLE, DIAMOND};
-		int[][] g = new int[w][h];
-
-		for(int x=0; x<w; x++){
-			for(int y=0; y<h; y++){
-				g[x][y] = s[int(random(s.length))];
+	private void build_grid(int w, int h){
+		this.CELLS = new ArrayList<Cell>();
+		int index = 0, j = 0, k = 0;
+		for(int x=0; x<w; x+=this.MAX_SIZE + this.MARGIN*.5){
+			j++;
+			k = 0;
+			for(int y=0; y<h; y+=this.MAX_SIZE + this.MARGIN*.5){
+				this.CELLS.add(new Cell(this, null, index, j, k, new PVector(x,y), this.MAX_SIZE, this.MARGIN, this.PROBA[int(random(this.PROBA.length))]));
+				index++;
+				k++;
 			}
 		}
-		this.GRID_list.add(g);
 	}
 
-	private void build_grid_list(int w, int h, int n){
-		int[] s = {TRIANGLE_UP, TRIANGLE_DOWN, CIRCLE, DIAMOND, CIRCLE, DIAMOND};
-		int sq = 1;
-		for(int i=0; i<n; i++){
-			int n_cols = int(w*sq),
-				n_rows = int(h*sq);
-			int[][] g = new int[n_cols][n_rows];
+	private void build_grid(int w, int h, int n){
+		this.CELLS = new ArrayList<Cell>();
+		int index = 0, j = 0, k = 0;
+		for(int x=0; x<w; x+=this.MAX_SIZE + this.MARGIN*.5){
+			k = 0;
+			for(int y=0; y<h; y+=this.MAX_SIZE + this.MARGIN*.5){
+				this.CELLS.add(new Cell(this, null, index, j, k, new PVector(x,y), this.MAX_SIZE, this.MARGIN, this.PROBA[int(random(this.PROBA.length))]));
+				k++;
+				index++;
+			}
+			j++;
+		}
 
-			for(int x=0; x<n_cols; x++){
-				for(int y=0; y<n_rows; y++){
-					g[x][y] = pow(sq, 2) < pow(random(pow(2,n-1)), 2) ? -1 : s[int(s.length * noise(x,y))];
+		ArrayList<Cell> divided = new ArrayList<Cell>();
+		for(int a=0; a<n; a++){
+			int r = int( random(this.CELLS.size() - divided.size()) );
+			for(int c=0; c<r; c++){
+				Cell cell = this.get_cell();
+				if(!divided.contains(cell)){
+					cell.divide();
+					divided.add(cell);
+				}
+			}
+		}
+	}
 
-					for(int prev=1; prev<i+1; prev++){
-						int previous_shape = this.GRID_list.get(i - prev)[int(x/pow(2, prev))][int(y/pow(2, prev))];
-						if(previous_shape > -1){
-							g[x][y] = -1;
-							break;
+	private void build_grid(Map contrast_map, int n){
+		this.CELLS = new ArrayList<Cell>();
+		contrast_map.pixelate(int(this.MIN_SIZE + this.MARGIN*.5));
+		int index = 0, j = 0, k = 0;
+
+		for(int x=0; x<contrast_map.IMG.width; x+=this.MIN_SIZE + this.MARGIN*.5){
+			k = 0;
+			for(int y=0; y<contrast_map.IMG.height; y+=this.MIN_SIZE + this.MARGIN*.5){
+				int shape = contrast_map.get(x, y);
+				Cell cell = new Cell(this, null, index, j, k, new PVector(x,y), this.MIN_SIZE, this.MARGIN, shape);
+				this.CELLS.add(cell);
+				index++;
+				k++;
+			}
+			j++;
+
+		}
+
+		for(int a=0; a<n; a++){
+			for(int x=0; x<j; x+=2){
+				for(int y=0; y<k; y+=2){
+					Cell o = this.get_cell(x,y);
+					if(o != null){
+						o.J = int(o.J*.5);
+						o.K = int(o.K*.5);
+
+						ArrayList<Cell> nhgbrs = new ArrayList<Cell>();
+							nhgbrs.add(this.get_cell(x+1, y));
+							nhgbrs.add(this.get_cell(x, y+1));
+							nhgbrs.add(this.get_cell(x+1, y+1));
+
+						boolean merge = true;
+						for(Cell c : nhgbrs)
+							if(c == null || o.SHAPE < 0 || c.SHAPE != o.SHAPE || c.SIZE != o.SIZE) merge = false;
+
+						if(merge){
+							o.SIZE = o.SIZE*2 + o.MARGIN*.5;
+							for(Cell c : nhgbrs) this.CELLS.remove(c);
 						}
 					}
 				}
 			}
-			sq *= 2;
-			this.GRID_list.add(g);
 		}
+
+		for(Cell c : this.CELLS) if(c.SHAPE == TRIANGLE) c.SHAPE = (random(1)>.5) ? TRIANGLE_DOWN : TRIANGLE_UP;
 	}
 
-	// SHAPE BUILDING
+
+
+	// -------------------------------------------------------
+	// SHAPE RELATED HELPERS
+
+	private int random_shape(){
+		return this.PROBA[int(random(this.PROBA.length))];
+	}
 
 	private PShape build_shape(int shape){
 		PShape s;
 		switch(shape){
+			case -2 : s = this.build_sm_diamond(); break;
+			case -3 : s = this.build_sm_circle(); break;
+			case -1 : s = this.build_empty(); break;
 			case 0 : s = this.build_triangle_up(); break;
 			case 1 : s = this.build_triangle_down(); break;
 			case 2 : s = this.build_diamond(); break;
 			case 3 : s = this.build_circle(); break;
+			case 4 : s = this.build_square(); break;
 			default : s = null; break;
 		}
 		return s;
+	}
+
+	private PShape build_sm_diamond(){
+		PShape sub = createShape();
+			sub.beginShape();
+				sub.vertex(.25, .5);
+				sub.vertex(.5, .25);
+				sub.vertex(.75, .5);
+				sub.vertex(.5, .75);
+			sub.endShape(CLOSE);
+			sub.setFill(this.BLACK);
+			sub.setStroke(false);
+		return sub;
+	}
+
+	private PShape build_sm_circle(){
+		PShape sub = createShape(PShape.ELLIPSE, .5, .5, .5, .5);
+			sub.setFill(this.BLACK);
+			sub.setStroke(false);
+		return sub;
+	}
+
+	private PShape build_empty(){
+		PShape empty = createShape();
+		return empty;
 	}
 
 	private PShape build_triangle_up(){
@@ -186,6 +267,13 @@ public class B_lab{
 		return diamond;
 	}
 
+	private PShape build_square(){
+		PShape square = createShape(RECT, 0, 0, 1, 1);
+			square.setFill(this.BLACK);
+			square.setStroke(false);
+		return square;
+	}
+
 	private PShape build_circle(){
 		PShape circle = createShape(PShape.ELLIPSE, .5, .5, 1, 1);
 			circle.setFill(this.BLACK);
@@ -193,13 +281,6 @@ public class B_lab{
 		return circle;
 	}
 
-	private void build_shapes(){
-		this.SHAPES_list = new ArrayList<PShape>();
-		this.SHAPES_list.add(this.build_triangle_up());
-		this.SHAPES_list.add(this.build_triangle_down());
-		this.SHAPES_list.add(this.build_diamond());
-		this.SHAPES_list.add(this.build_circle());
 
 
-	}
 }
